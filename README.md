@@ -17,6 +17,7 @@ This project was completed on 2025-02-15 at 10:30 PM.
 - Proper error handling (e.g., handling cases where a book is not found)
 
 ## Technologies Used
+- **Java** (17)
 - **Spring Boot** (REST API, JPA, Validation)
 - **MySQL** (Relational Database Management System)
 - **Lombok** (to reduce boilerplate code)
@@ -30,6 +31,9 @@ This project was completed on 2025-02-15 at 10:30 PM.
    - Eclipse: [Download Eclipse](https://www.eclipse.org/downloads/)
 2. Install **MySQL**:
    - MySQL Community Edition: [Download MySQL](https://dev.mysql.com/downloads/installer/)
+3. Install **JDK 17**:
+ - OpenJDK: [Download OpenJDK](https://adoptium.net/)
+ - Oracle JDK: [Download Oracle JDK](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)
 
 ### Configuration
 1. Clone the repository:
