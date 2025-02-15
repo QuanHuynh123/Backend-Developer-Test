@@ -7,9 +7,14 @@ This project was completed on 2025-02-15 at 10:30 PM.
 
 ## Features
 - CRUD operations for books and authors
-- Filtering books by author, published date, title, and price range
-- Validation for unique ISBNs
-- Handling of optional author information in book responses
+- Retrieve a book by ID (basic details by default, optional full author details)
+- Retrieve a list of all books with optional filtering by:
+  - author ID
+  - published date (e.g., books published after a certain date)
+  - title (pattern matching)
+  - price (greater or less than a specified value)
+- Validation for unique ISBNs and positive price values
+- Proper error handling (e.g., handling cases where a book is not found)
 
 ## Technologies Used
 - **Spring Boot** (REST API, JPA, Validation)
