@@ -1,71 +1,138 @@
 package com.example.bookstore.service;
 
+import com.example.bookstore.dto.BookDTO;
+import com.example.bookstore.entity.Author;
 import com.example.bookstore.entity.Book;
+import com.example.bookstore.exception.DuplicateISBNException;
 import com.example.bookstore.exception.ResourceNotFoundException;
+import com.example.bookstore.mapper.BookMapper;
+import com.example.bookstore.repository.AuthorRepository;
 import com.example.bookstore.repository.BookRepository;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
+import java.sql.Date;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class BookService {
 
     @Autowired
     BookRepository bookRepository;
+    @Autowired
+    BookMapper bookMapper;
+    @Autowired
+    AuthorRepository authorRepository;
 
-    public Book  addBook(Book book){
-        return bookRepository.save(book);
+    public BookDTO createBook(BookDTO bookDTO) {
+        try {
+            Author author = authorRepository.findById(bookDTO.getAuthorId())
+                    .orElseThrow(() -> new RuntimeException("Author not exist"));
+
+
+            Book book = bookMapper.toEntity(bookDTO);
+            book.setAuthor(author);
+
+            book = bookRepository.save(book);
+            return bookMapper.toDTO(book);
+        } catch (DataIntegrityViolationException ex) {
+            throw new DuplicateISBNException("ISBN " + bookDTO.getIsbn() + " is exist.");
+        }
     }
 
-    public Book getBook(int bookId){
-        return bookRepository.findById(bookId).orElseThrow(()-> new ResourceNotFoundException("Can't found book"));
+
+    public BookDTO getBook(int bookId, boolean includeAuthor) {
+        Book book = bookRepository.findById(bookId)
+                .orElseThrow(() -> new ResourceNotFoundException("Can't found book"));
+
+        return includeAuthor ? bookMapper.toDTOWithAuthor(book) : bookMapper.toDTO(book);
     }
 
-    public List<Book> getAllBooks(Optional<Long> authorId,
-                                  Optional<LocalDate> publishedAfter,
-                                  Optional<String> title,
-                                  Optional<Double> minPrice,
-                                  Optional<Double> maxPrice,
-                                  boolean includeAuthorInfo) {
+
+
+    public List<BookDTO> getAllBooks(Long authorId,
+                                     Date publishedAfter,
+                                     String title,
+                                     Double minPrice,
+                                     Double maxPrice,
+                                     boolean includeAuthorInfo) {
         Specification<Book> spec = Specification.where(null);
 
-        if (authorId.isPresent()) {
+        if (authorId != null) {
             spec = spec.and((root, query, criteriaBuilder) ->
-                    criteriaBuilder.equal(root.get("author").get("id"), authorId.get()));
+                    criteriaBuilder.equal(root.get("author").get("id"), authorId));
         }
-        if (publishedAfter.isPresent()) {
+        if (publishedAfter != null) {
             spec = spec.and((root, query, criteriaBuilder) ->
-                    criteriaBuilder.greaterThan(root.get("publishedDate"), publishedAfter.get()));
+                    criteriaBuilder.greaterThan(root.get("published_date"), publishedAfter));
         }
-        if (title.isPresent()) {
+        if (title != null && !title.trim().isEmpty()) {
             spec = spec.and((root, query, criteriaBuilder) ->
-                    criteriaBuilder.like(root.get("title"), "%" + title.get() + "%"));
+                    criteriaBuilder.like(root.get("title"), "%" + title + "%"));
         }
-        if (minPrice.isPresent()) {
+        if (minPrice != null) {
             spec = spec.and((root, query, criteriaBuilder) ->
-                    criteriaBuilder.greaterThanOrEqualTo(root.get("price"), minPrice.get()));
+                    criteriaBuilder.greaterThanOrEqualTo(root.get("price"), minPrice));
         }
-        if (maxPrice.isPresent()) {
+        if (maxPrice != null) {
             spec = spec.and((root, query, criteriaBuilder) ->
-                    criteriaBuilder.lessThanOrEqualTo(root.get("price"), maxPrice.get()));
+                    criteriaBuilder.lessThanOrEqualTo(root.get("price"), maxPrice));
         }
 
-        return bookRepository.findAll((Sort) spec);
+        List<Book> books;
+
+        // If no filter condition, get all books
+        if (spec == null) {
+            books = bookRepository.findAll();
+        } else {
+            books = bookRepository.findAll(spec);
+        }
+
+        if (!includeAuthorInfo) {
+            books.forEach(book -> book.setAuthor(null));
+        }
+
+        return bookMapper.toDTOList(books);
     }
 
-    public Book updateBook(Book book){
-        if (bookRepository.existsById(book.getId()))
-            return null;
-        else return bookRepository.save(book);
+    @Transactional
+    public BookDTO updateBook(BookDTO bookDTO) {
+        Book book = bookRepository.findById(bookDTO.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + bookDTO.getId()));
+
+        // Check ISBN
+        if (!book.getIsbn().equals(bookDTO.getIsbn())) {
+            try {
+                book.setIsbn(bookDTO.getIsbn());
+                bookRepository.save(book); // Kiểm tra ngay ở đây
+            } catch (DataIntegrityViolationException ex) {
+                throw new DuplicateISBNException("ISBN " + bookDTO.getIsbn() + " already exists.");
+            }
+        }
+
+        book.setTitle(bookDTO.getTitle());
+        book.setIsbn(bookDTO.getIsbn());
+        book.setPrice(bookDTO.getPrice());
+        book.setPublished_date(bookDTO.getPublishedDate());
+
+        // If bookDTO have authorId, update id author
+        if (bookDTO.getAuthorId() > 0 ) {
+            Author author = authorRepository.findById(bookDTO.getAuthorId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Author not found with id: " + bookDTO.getAuthorId()));
+            book.setAuthor(author);
+        }
+
+        return bookMapper.toDTO(book);
     }
 
-    public void deleteBook(int bookId){
-        bookRepository.deleteById(bookId);
+    public void deleteBook(int bookId) {
+        Book book = bookRepository.findById(bookId)
+                .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + bookId));
+        bookRepository.delete(book);
     }
-
 }
