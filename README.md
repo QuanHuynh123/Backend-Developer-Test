@@ -75,7 +75,5 @@ The application provides RESTful APIs for managing books and authors.
 - **POST** `/authors/add` - Create a new author
 - **DELETE** `/authors/{id}` - Delete an author
 
-## Completion Time
-This project was completed on [YYYY-MM-DD] within [X hours/days].
 
 
