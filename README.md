@@ -3,7 +3,7 @@
 ## Overview
 This is a simple Spring Boot application for managing books and authors in a bookstore. It provides RESTful APIs for creating, updating, retrieving, and deleting books and authors.
 ## Completion Time
-This project was completed on 2015-02-15 at 10:30 PM.
+This project was completed on 2025-02-15 at 10:30 PM.
 
 ## Features
 - CRUD operations for books and authors
